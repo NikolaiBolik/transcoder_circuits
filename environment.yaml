@@ -1,0 +1,20 @@
+channels:
+  - pytorch
+  - nvidia
+  - conda-forge
+  - defaults
+dependencies:
+  - matplotlib
+  - numpy
+  - plotly
+  - pytorch==2.2.0
+  - pytorch-cuda=11.8
+  - tqdm
+  - datasets==2.12.0
+  - einops==0.7.0
+  - setuptools==67.7.2
+  - wandb
+  - huggingface_hub
+  - pip
+  - pip:
+    - transformer_lens==1.11.0
