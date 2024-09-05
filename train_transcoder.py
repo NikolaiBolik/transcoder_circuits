@@ -12,9 +12,10 @@ Transcoder-specific parameters are marked as such in comments.
 """
 
 import torch
-import os 
+import os
 import sys
 import numpy as np
+import wandb
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
@@ -22,8 +23,13 @@ from sae_training.config import LanguageModelSAERunnerConfig
 from sae_training.utils import LMSparseAutoencoderSessionloader
 from sae_training.train_sae_on_language_model import train_sae_on_language_model
 
-lr = 0.0004 # learning rate
-l1_coeff = 0.00014 # l1 sparsity regularization coefficient
+lr = 0.0004  # learning rate
+l1_coeff = 0.00014  # l1 sparsity regularization coefficient
+
+total_training_steps = 61279
+batch_size = 4096
+total_training_tokens = total_training_steps * batch_size
+l1_warm_up_steps = total_training_steps // 20
 
 cfg = LanguageModelSAERunnerConfig(
     # Data Generating Function (Model + Training Distibuion)
@@ -34,15 +40,15 @@ cfg = LanguageModelSAERunnerConfig(
     #    pre-MLP LayerNorm -- that is, the inputs to the MLP.
     # You might alternatively prefer to train on "blocks.8.hook_resid_mid",
     #    which corresponds to the input to the pre-MLP LayerNorm.
-    hook_point = "blocks.8.ln2.hook_normalized",
-    hook_point_layer = 8,
-    d_in = 768,
-    dataset_path = "Skylion007/openwebtext",
-    is_dataset_tokenized=False,
-    model_name='gpt2-small',
+    hook_point="blocks.19.ln2.hook_normalized",
+    hook_point_layer=19,
+    d_in=4096,
+    dataset_path="MIN12352/java_mono_1-4-tokenized-128",
+    is_dataset_tokenized=True,
+    model_name="CodeLlama-7b-Instruct-hf",
 
     # Transcoder-specific parameters.
-    is_transcoder = True, # We're training a transcoder here.
+    is_transcoder=True,  # We're training a transcoder here.
     # "out_hook_point" is the TransformerLens HookPoint representing
     #    the output activations that the transcoder should reconstruct.
     # In our use case, we're using transcoders to interpret MLP sublayers.
@@ -52,50 +58,56 @@ cfg = LanguageModelSAERunnerConfig(
     # As such, we want to grab the "hook_mlp_out" activations from our
     #    transformer, which (as the name suggests), represent the
     #    output activations of the original MLP sublayer.
-    out_hook_point = "blocks.8.hook_mlp_out",
-    out_hook_point_layer = 8,
-    d_out = 768,
-    
+    out_hook_point="blocks.19.hook_mlp_out",
+    out_hook_point_layer=19,
+    d_out=4096,
+
     # SAE Parameters
-    expansion_factor = 32,
-    b_dec_init_method = "mean",
-    
+    expansion_factor=16,
+    b_dec_init_method="mean",
+
     # Training Parameters
-    lr = lr,
-    l1_coefficient = l1_coeff,
+    lr=lr,
+    l1_coefficient=l1_coeff,
     lr_scheduler_name="constantwithwarmup",
-    train_batch_size = 4096,
-    context_size = 128,
-    lr_warm_up_steps=5000,
-    
+    train_batch_size=batch_size,
+    context_size=128,
+    lr_warm_up_steps=l1_warm_up_steps,
+
     # Activation Store Parameters
-    n_batches_in_buffer = 128,
-    total_training_tokens = 1_000_000 * 60,
-    store_batch_size = 32,
-    
+    n_batches_in_buffer=2,
+    total_training_tokens=total_training_tokens,
+    store_batch_size=1,
+
     # Dead Neurons and Sparsity
-    use_ghost_grads=True,
-    feature_sampling_method = None,
-    feature_sampling_window = 1000,
+    use_ghost_grads=False,
+    feature_sampling_method=None,
+    feature_sampling_window=1000,
     resample_batches=1028,
-    dead_feature_window=5000,
-    dead_feature_threshold = 1e-8,
+    dead_feature_window=2000,
+    dead_feature_threshold=1e-8,
 
     # WANDB
-    log_to_wandb = False,
-    
+    log_to_wandb=True,
+    wandb_project="Transcoder_Codellama",
+    wandb_entity=None,
+    wandb_log_frequency=10,
+
     # Misc
-    use_tqdm = True,
-    device = "cuda",
-    seed = 42,
-    n_checkpoints = 3,
-    checkpoint_path = "gpt2-small-transcoders", # change as you please
-    dtype = torch.float32,
+    use_tqdm=True,
+    device="cuda",
+    seed=42,
+    n_checkpoints=3,
+    checkpoint_path="codellama-transcoders",  # change as you please
+    dtype=torch.float32,
 )
 
 print(f"About to start training with lr {lr} and l1 {l1_coeff}")
 print(f"Checkpoint path: {cfg.checkpoint_path}")
 print(cfg)
+
+if cfg.log_to_wandb:
+    wandb.init(project=cfg.wandb_project, entity=cfg.wandb_entity)
 
 loader = LMSparseAutoencoderSessionloader(cfg)
 model, sparse_autoencoder, activations_loader = loader.load_session()
@@ -104,14 +116,14 @@ model, sparse_autoencoder, activations_loader = loader.load_session()
 sparse_autoencoder = train_sae_on_language_model(
     model, sparse_autoencoder, activations_loader,
     n_checkpoints=cfg.n_checkpoints,
-    batch_size = cfg.train_batch_size,
-    feature_sampling_method = cfg.feature_sampling_method,
-    feature_sampling_window = cfg.feature_sampling_window,
-    feature_reinit_scale = cfg.feature_reinit_scale,
-    dead_feature_threshold = cfg.dead_feature_threshold,
+    batch_size=cfg.train_batch_size,
+    feature_sampling_method=cfg.feature_sampling_method,
+    feature_sampling_window=cfg.feature_sampling_window,
+    feature_reinit_scale=cfg.feature_reinit_scale,
+    dead_feature_threshold=cfg.dead_feature_threshold,
     dead_feature_window=cfg.dead_feature_window,
-    use_wandb = cfg.log_to_wandb,
-    wandb_log_frequency = cfg.wandb_log_frequency
+    use_wandb=cfg.log_to_wandb,
+    wandb_log_frequency=cfg.wandb_log_frequency
 )
 
 # save sae to checkpoints folder
