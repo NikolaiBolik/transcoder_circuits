@@ -78,6 +78,7 @@ cfg = LanguageModelSAERunnerConfig(
     n_batches_in_buffer=2,
     total_training_tokens=total_training_tokens,
     store_batch_size=1,
+    data_column="input_ids",
 
     # Dead Neurons and Sparsity
     use_ghost_grads=False,
@@ -100,6 +101,7 @@ cfg = LanguageModelSAERunnerConfig(
     n_checkpoints=3,
     checkpoint_path="codellama-transcoders",  # change as you please
     dtype=torch.float32,
+    model_dtype=torch.float16,
 )
 
 print(f"About to start training with lr {lr} and l1 {l1_coeff}")

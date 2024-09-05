@@ -25,7 +25,7 @@ class LMSparseAutoencoderSessionloader():
         Loads a session for training a sparse autoencoder on a language model.
         '''
         
-        model = self.get_model(self.cfg.model_name)
+        model = self.get_model(self.cfg.model_name, self.cfg.model_dtype)
         model.to(self.cfg.device)
         activations_loader = self.get_activations_loader(self.cfg, model)
         sparse_autoencoder = self.initialize_sparse_autoencoder(self.cfg)
@@ -50,14 +50,14 @@ class LMSparseAutoencoderSessionloader():
         
         return model, sparse_autoencoder, activations_loader
     
-    def get_model(self, model_name: str):
+    def get_model(self, model_name: str, dtype: torch.dtype):
         '''
         Loads a model from transformer lens
         '''
         
         # Todo: add check that model_name is valid
         
-        model = HookedTransformer.from_pretrained(model_name)
+        model = HookedTransformer.from_pretrained(model_name, torch_dtype=dtype)
         
         return model 
     

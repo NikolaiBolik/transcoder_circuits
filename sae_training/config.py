@@ -33,11 +33,13 @@ class RunnerConfig(ABC):
     n_batches_in_buffer: int = 20
     total_training_tokens: int = 2_000_000
     store_batch_size: int = 1024
+    data_column: str = "tokens"
 
     # Misc
     device: str = "cpu"
     seed: int = 42
     dtype: torch.dtype = torch.float32
+    model_dtype: torch.dtype = torch.float32
 
     # transcoder stuff
     is_transcoder: bool = False
@@ -109,6 +111,7 @@ class LanguageModelSAERunnerConfig(RunnerConfig):
     n_checkpoints: int = 0
     checkpoint_path: str = "checkpoints"
     use_tqdm: bool = True
+
 
     def __post_init__(self):
         super().__post_init__()

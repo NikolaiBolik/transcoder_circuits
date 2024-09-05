@@ -22,7 +22,7 @@ class ActivationsStore:
         self.iterable_dataset = iter(self.dataset)
         
         # check if it's tokenized
-        if "tokens" in next(self.iterable_dataset).keys():
+        if self.cfg.data_column in next(self.iterable_dataset).keys():
             self.cfg.is_dataset_tokenized = True
             print("Dataset is tokenized! Updating config.")
         elif "text" in next(self.iterable_dataset).keys():
@@ -85,7 +85,7 @@ class ActivationsStore:
                 assert len(tokens.shape) == 1, f"tokens.shape should be 1D but was {tokens.shape}"
             else:
                 tokens = torch.tensor(
-                    next(self.iterable_dataset)["tokens"],
+                    next(self.iterable_dataset)[self.cfg.data_column],
                     dtype=torch.long,
                     device=device,
                     requires_grad=False,
