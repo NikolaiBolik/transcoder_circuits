@@ -26,8 +26,8 @@ from sae_training.train_sae_on_language_model import train_sae_on_language_model
 lr = 0.0004  # learning rate
 l1_coeff = 0.00014  # l1 sparsity regularization coefficient
 
-total_training_steps = 61279
-batch_size = 4096
+total_training_steps = 8169
+batch_size = 3076
 total_training_tokens = total_training_steps * batch_size
 l1_warm_up_steps = total_training_steps // 20
 
