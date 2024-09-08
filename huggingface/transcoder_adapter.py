@@ -74,7 +74,7 @@ class TranscoderAdapter(nn.Module):
 
     @classmethod
     def load(cls, path: Path):
-        cfg_and_states = torch.load(path)
+        cfg_and_states = torch.load(path, map_location="cpu")
         module = cls(cfg_and_states["cfg"])
 
         state_dict = cfg_and_states["state_dict"]

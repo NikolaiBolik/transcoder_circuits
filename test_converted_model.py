@@ -10,7 +10,9 @@ if __name__ == '__main__':
     else:
         model = AutoModelForCausalLM.from_pretrained("codellama/CodeLlama-7b-Instruct-hf", torch_dtype=torch.float16)
         adapter = TranscoderAdapter.load("/scratch/share/final_sparse_autoencoder_CodeLlama-7b-Instruct-hf_blocks.19.ln2.hook_normalized_65536.pt")
-        model.base_model.layers[19].mlp = adapter.to(model.dtype) # TODO: The model work extremely well even if we replace the wrong layer
+        device = next(model.base_model.layers[19].mlp.parameters()).device
+        # TODO: The model work extremely well even if we replace the wrong layer
+        model.base_model.layers[19].mlp = adapter.to(model.dtype).to(device)
 
     generator = pipeline("text-generation", model=model,
                          device="cuda", tokenizer="codellama/CodeLlama-7b-Instruct-hf")
