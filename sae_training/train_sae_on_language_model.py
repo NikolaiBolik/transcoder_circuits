@@ -115,12 +115,14 @@ def train_sae_on_language_model(
         if (n_training_steps + 1) % feature_sampling_window == 0:
             feature_sparsity = act_freq_scores / n_frac_active_tokens
             log_feature_sparsity = torch.log10(feature_sparsity + 1e-10).detach().cpu()
+            log_mean_feature_sparsity = torch.log10(feature_sparsity.mean() + 1e-10).detach().cpu()
 
             if use_wandb:
                 wandb_histogram = wandb.Histogram(log_feature_sparsity.numpy())
                 wandb.log(
                     {   
                         "metrics/mean_log10_feature_sparsity": log_feature_sparsity.mean().item(),
+                        "metrics/log10_mean_feature_sparsity": log_mean_feature_sparsity.item(),
                         "plots/feature_density_line_chart": wandb_histogram,
                     },
                     step=n_training_steps,
