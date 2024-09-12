@@ -90,6 +90,7 @@ class LanguageModelSAERunnerConfig(RunnerConfig):
     sparse_connection_sae_path: Optional[str] = None
     sparse_connection_l1_coeff: Optional[float] = None
     sparse_connection_use_W_enc: bool = True
+    top_k: Optional[int] = None
 
     # Resampling protocol args
     use_ghost_grads: bool = False, # want to change this to true on some timeline.

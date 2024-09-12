@@ -17,6 +17,8 @@ dependencies:
   - setuptools==67.7.2
   - wandb
   - huggingface_hub
+  - jupyter
+  - notebook
   - pip
   - pip:
       - git+https://github.com/aip-hd-research/TransformerLens.git

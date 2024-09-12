@@ -119,7 +119,18 @@ class SparseAutoencoder(HookedRootModule):
             )
             + self.b_enc
         )
-        feature_acts = self.hook_hidden_post(torch.nn.functional.relu(hidden_pre))
+        feature_acts = torch.nn.functional.relu(hidden_pre)
+
+        if self.cfg.top_k is not None:
+            acts_topk = torch.topk(feature_acts.flatten(), self.cfg.top_k * x.shape[0], dim=-1)
+            acts_topk = (
+                torch.zeros_like(feature_acts.flatten())
+                .scatter(-1, acts_topk.indices, acts_topk.values)
+                .reshape(feature_acts.shape)
+            )
+            feature_acts = acts_topk
+
+        feature_acts = self.hook_hidden_post(feature_acts)
 
         if self.cfg.is_transcoder:
             # dumb if statement to deal with transcoders

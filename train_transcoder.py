@@ -24,12 +24,14 @@ from sae_training.utils import LMSparseAutoencoderSessionloader
 from sae_training.train_sae_on_language_model import train_sae_on_language_model
 
 lr = 0.0004  # learning rate
-l1_coeff = 0.00014  # l1 sparsity regularization coefficient
+l1_coeff = 0.00014  # l1 sparsity regularization coefficient 14e-5
+expansion_factor = 32
+d_in = 4096
 
-total_training_steps = 8169
-batch_size = 3076
-total_training_tokens = total_training_steps * batch_size
-l1_warm_up_steps = total_training_steps // 20
+total_training_steps = 8169 * 2
+batch_size = 4096
+total_training_tokens = 1_000_000 * 60
+l1_warm_up_steps = 5000
 
 cfg = LanguageModelSAERunnerConfig(
     # Data Generating Function (Model + Training Distibuion)
@@ -40,12 +42,12 @@ cfg = LanguageModelSAERunnerConfig(
     #    pre-MLP LayerNorm -- that is, the inputs to the MLP.
     # You might alternatively prefer to train on "blocks.8.hook_resid_mid",
     #    which corresponds to the input to the pre-MLP LayerNorm.
-    hook_point="blocks.19.ln2.hook_normalized",
-    hook_point_layer=19,
-    d_in=4096,
-    dataset_path="MIN12352/java_mono_1-4-tokenized-128",
-    is_dataset_tokenized=True,
-    model_name="CodeLlama-7b-Instruct-hf",
+    hook_point="blocks.8.ln2.hook_normalized",
+    hook_point_layer=8,
+    d_in=768,
+    dataset_path="Skylion007/openwebtext",
+    is_dataset_tokenized=False,
+    model_name='gpt2-small',
 
     # Transcoder-specific parameters.
     is_transcoder=True,  # We're training a transcoder here.
@@ -58,12 +60,12 @@ cfg = LanguageModelSAERunnerConfig(
     # As such, we want to grab the "hook_mlp_out" activations from our
     #    transformer, which (as the name suggests), represent the
     #    output activations of the original MLP sublayer.
-    out_hook_point="blocks.19.hook_mlp_out",
-    out_hook_point_layer=19,
-    d_out=4096,
+    out_hook_point="blocks.8.hook_mlp_out",
+    out_hook_point_layer=8,
+    d_out=768,
 
     # SAE Parameters
-    expansion_factor=16,
+    expansion_factor=expansion_factor,
     b_dec_init_method="mean",
 
     # Training Parameters
@@ -77,16 +79,17 @@ cfg = LanguageModelSAERunnerConfig(
     # Activation Store Parameters
     n_batches_in_buffer=2,
     total_training_tokens=total_training_tokens,
-    store_batch_size=1,
+    store_batch_size=32,
     data_column="input_ids",
 
     # Dead Neurons and Sparsity
-    use_ghost_grads=False,
+    use_ghost_grads=True,
     feature_sampling_method=None,
     feature_sampling_window=1000,
     resample_batches=1028,
-    dead_feature_window=2000,
+    dead_feature_window=5000,
     dead_feature_threshold=1e-8,
+    top_k=128,
 
     # WANDB
     log_to_wandb=True,
@@ -99,7 +102,7 @@ cfg = LanguageModelSAERunnerConfig(
     device="cuda",
     seed=42,
     n_checkpoints=3,
-    checkpoint_path="codellama-transcoders",  # change as you please
+    checkpoint_path="gpt2-small-transcoders",  # change as you please
     dtype=torch.float32,
     model_dtype=torch.float16,
 )
