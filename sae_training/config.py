@@ -19,7 +19,7 @@ class RunnerConfig(ABC):
     hook_point_layer: int = 0
     hook_point_head_index: Optional[int] = None
     dataset_path: str = "NeelNanda/c4-tokenized-2b"
-    is_dataset_tokenized: bool = True
+    is_dataset_tokenized: Optional[bool] = None
     context_size: int = 128
     use_cached_activations: bool = False
     cached_activations_path: Optional[

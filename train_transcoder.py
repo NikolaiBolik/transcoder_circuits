@@ -27,7 +27,6 @@ from sae_training.train_sae_on_language_model import train_sae_on_language_model
 lr = 0.0004  # learning rate
 l1_coeff = 0.00014  # l1 sparsity regularization coefficient 14e-5
 expansion_factor = 32
-d_in = 4096
 
 total_training_steps = 8169 * 2
 batch_size = 4096
@@ -78,10 +77,10 @@ cfg = LanguageModelSAERunnerConfig(
     lr_warm_up_steps=l1_warm_up_steps,
 
     # Activation Store Parameters
-    n_batches_in_buffer=2,
+    n_batches_in_buffer=128,
     total_training_tokens=total_training_tokens,
     store_batch_size=32,
-    data_column="input_ids",
+    data_column="text",
 
     # Dead Neurons and Sparsity
     use_ghost_grads=True,

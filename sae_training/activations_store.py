@@ -20,14 +20,16 @@ class ActivationsStore:
         self.model = model
         self.dataset = load_dataset(cfg.dataset_path, split="train", streaming=True)
         self.iterable_dataset = iter(self.dataset)
-        
-        # check if it's tokenized
-        if self.cfg.data_column in next(self.iterable_dataset).keys():
-            self.cfg.is_dataset_tokenized = True
-            print("Dataset is tokenized! Updating config.")
-        elif "text" in next(self.iterable_dataset).keys():
-            self.cfg.is_dataset_tokenized = False
-            print("Dataset is not tokenized! Updating config.")
+
+        if self.cfg.is_dataset_tokenized is None:
+            # guess if it's tokenized
+            if isinstance(next(self.iterable_dataset)[self.cfg.data_column], str):
+                self.cfg.is_dataset_tokenized = False
+                print("Assuming dataset is not tokenized! Updating config.")
+            else:
+                self.cfg.is_dataset_tokenized = True
+                print("Assuming dataset is tokenized! Updating config.")
+
         
         if self.cfg.use_cached_activations:
             # Sanity check: does the cache directory exist?
@@ -76,7 +78,7 @@ class ActivationsStore:
         # pbar = tqdm(total=batch_size, desc="Filling batches")
         while batch_tokens.shape[0] < batch_size:
             if not self.cfg.is_dataset_tokenized:
-                s = next(self.iterable_dataset)["text"]
+                s = next(self.iterable_dataset)[self.cfg.data_column]
                 tokens = self.model.to_tokens(
                     s, 
                     truncate=True, 
