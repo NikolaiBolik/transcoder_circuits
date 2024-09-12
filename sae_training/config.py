@@ -106,6 +106,7 @@ class LanguageModelSAERunnerConfig(RunnerConfig):
     log_to_wandb: bool = True
     wandb_project: str = "mats_sae_training_language_model"
     wandb_entity: str = None
+    wandb_group: str = None
     wandb_log_frequency: int = 10
 
     # Misc

@@ -10,6 +10,7 @@ Most of the parameters given here are the same as the SAE training parameters
 Transcoder-specific parameters are marked as such in comments.
 
 """
+from dataclasses import asdict
 
 import torch
 import os
@@ -95,6 +96,7 @@ cfg = LanguageModelSAERunnerConfig(
     log_to_wandb=True,
     wandb_project="Transcoder_Codellama",
     wandb_entity=None,
+    wandb_group="GPT2",
     wandb_log_frequency=10,
 
     # Misc
@@ -112,7 +114,7 @@ print(f"Checkpoint path: {cfg.checkpoint_path}")
 print(cfg)
 
 if cfg.log_to_wandb:
-    wandb.init(project=cfg.wandb_project, entity=cfg.wandb_entity)
+    wandb.init(project=cfg.wandb_project, entity=cfg.wandb_entity, group=cfg.wandb_group, config=asdict(cfg))
 
 loader = LMSparseAutoencoderSessionloader(cfg)
 model, sparse_autoencoder, activations_loader = loader.load_session()
