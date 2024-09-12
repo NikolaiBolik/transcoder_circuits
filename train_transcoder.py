@@ -89,7 +89,7 @@ cfg = LanguageModelSAERunnerConfig(
     resample_batches=1028,
     dead_feature_window=5000,
     dead_feature_threshold=1e-8,
-    top_k=128,
+    top_k=None,
 
     # WANDB
     log_to_wandb=True,
