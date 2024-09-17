@@ -78,6 +78,7 @@ class LanguageModelSAERunnerConfig(RunnerConfig):
     lr_scheduler_name: str = "constant"  # constant, constantwithwarmup, linearwarmupdecay, cosineannealing, cosineannealingwarmup
     lr_warm_up_steps: int = 500
     train_batch_size: int = 4096
+    per_device_batch_size: Optional[int] = None
 
     # transcoder stuff
     is_transcoder: bool = False

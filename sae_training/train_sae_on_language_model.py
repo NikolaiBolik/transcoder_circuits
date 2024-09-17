@@ -1,4 +1,5 @@
 from functools import partial
+from typing import Optional
 
 import numpy as np
 import torch
@@ -18,6 +19,7 @@ def train_sae_on_language_model(
     sparse_autoencoder: SparseAutoencoder,
     activation_store: ActivationsStore,
     batch_size: int = 1024,
+    per_device_batch_size: Optional[int] = None,
     n_checkpoints: int = 0,
     feature_sampling_method: str = "l2",  # None, l2, or anthropic
     feature_sampling_window: int = 1000,  # how many training steps between resampling the features / considiring neurons dead
@@ -27,6 +29,14 @@ def train_sae_on_language_model(
     use_wandb: bool = False,
     wandb_log_frequency: int = 50,
 ):
+    gradient_accumulation_steps = 1
+    if per_device_batch_size is not None:
+        gradient_accumulation_steps = batch_size // per_device_batch_size
+        batch_size = per_device_batch_size
+        feature_sampling_window *= gradient_accumulation_steps
+        dead_feature_window *= gradient_accumulation_steps
+        wandb_log_frequency *= gradient_accumulation_steps
+
 
     if feature_sampling_method is not None:
         feature_sampling_method = feature_sampling_method.lower()
@@ -50,7 +60,7 @@ def train_sae_on_language_model(
     scheduler = get_scheduler(
         sparse_autoencoder.cfg.lr_scheduler_name,
         optimizer=optimizer,
-        warm_up_steps = sparse_autoencoder.cfg.lr_warm_up_steps, 
+        warm_up_steps = sparse_autoencoder.cfg.lr_warm_up_steps * gradient_accumulation_steps,
         training_steps=total_training_steps,
         lr_end=sparse_autoencoder.cfg.lr / 10, # heuristic for now. 
     )
@@ -140,8 +150,9 @@ def train_sae_on_language_model(
                 optimizer.param_groups[0]['lr'] = current_lr
         else:
             scheduler.step()
-    
-        optimizer.zero_grad()
+
+        if n_training_steps % gradient_accumulation_steps == 0:
+            optimizer.zero_grad()
         
         ghost_grad_neuron_mask = (n_forward_passes_since_fired > sparse_autoencoder.cfg.dead_feature_window).bool()
         next_batch = activation_store.next_batch()
@@ -243,8 +254,9 @@ def train_sae_on_language_model(
 
         loss.backward()
         sparse_autoencoder.remove_gradient_parallel_to_decoder_directions()
-        optimizer.step()
 
+        if (n_training_steps + 1) % gradient_accumulation_steps == 0:
+            optimizer.step()
 
         # checkpoint if at checkpoint frequency
         if n_checkpoints > 0 and n_training_tokens > checkpoint_thresholds[0]:

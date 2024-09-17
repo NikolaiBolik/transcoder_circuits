@@ -24,13 +24,13 @@ from sae_training.config import LanguageModelSAERunnerConfig
 from sae_training.utils import LMSparseAutoencoderSessionloader
 from sae_training.train_sae_on_language_model import train_sae_on_language_model
 
-lr = 0.0004  # learning rate
-l1_coeff = 0.00014  # l1 sparsity regularization coefficient 14e-5
-expansion_factor = 32
+lr = 4e-4  # learning rate
+l1_coeff = 7e-5  # l1 sparsity regularization coefficient 1.4e-4
+expansion_factor = 4
 
-total_training_steps = 8169 * 2
 batch_size = 4096
-total_training_tokens = 1_000_000 * 60
+per_device_batch_size = None
+total_training_tokens = 250_000_000
 l1_warm_up_steps = 5000
 
 cfg = LanguageModelSAERunnerConfig(
@@ -42,12 +42,12 @@ cfg = LanguageModelSAERunnerConfig(
     #    pre-MLP LayerNorm -- that is, the inputs to the MLP.
     # You might alternatively prefer to train on "blocks.8.hook_resid_mid",
     #    which corresponds to the input to the pre-MLP LayerNorm.
-    hook_point="blocks.8.ln2.hook_normalized",
-    hook_point_layer=8,
-    d_in=768,
-    dataset_path="Skylion007/openwebtext",
+    hook_point="blocks.19.ln2.hook_normalized",
+    hook_point_layer=19,
+    d_in=4096,
+    dataset_path="codeparrot/github-code",
     is_dataset_tokenized=False,
-    model_name='gpt2-small',
+    model_name='CodeLlama-7b-Instruct-hf',
 
     # Transcoder-specific parameters.
     is_transcoder=True,  # We're training a transcoder here.
@@ -60,9 +60,9 @@ cfg = LanguageModelSAERunnerConfig(
     # As such, we want to grab the "hook_mlp_out" activations from our
     #    transformer, which (as the name suggests), represent the
     #    output activations of the original MLP sublayer.
-    out_hook_point="blocks.8.hook_mlp_out",
-    out_hook_point_layer=8,
-    d_out=768,
+    out_hook_point="blocks.19.hook_mlp_out",
+    out_hook_point_layer=19,
+    d_out=4096,
 
     # SAE Parameters
     expansion_factor=expansion_factor,
@@ -73,14 +73,15 @@ cfg = LanguageModelSAERunnerConfig(
     l1_coefficient=l1_coeff,
     lr_scheduler_name="constantwithwarmup",
     train_batch_size=batch_size,
+    per_device_batch_size=per_device_batch_size,
     context_size=128,
     lr_warm_up_steps=l1_warm_up_steps,
 
     # Activation Store Parameters
-    n_batches_in_buffer=128,
+    n_batches_in_buffer=64,
     total_training_tokens=total_training_tokens,
-    store_batch_size=32,
-    data_column="text",
+    store_batch_size=4,
+    data_column="code",
 
     # Dead Neurons and Sparsity
     use_ghost_grads=True,
@@ -94,8 +95,8 @@ cfg = LanguageModelSAERunnerConfig(
     # WANDB
     log_to_wandb=True,
     wandb_project="Transcoder_Codellama",
-    wandb_entity=None,
-    wandb_group="GPT2",
+    wandb_entity="pvs-shared",
+    wandb_group="CodeLlama_Initial_Sweep",
     wandb_log_frequency=10,
 
     # Misc
@@ -103,10 +104,11 @@ cfg = LanguageModelSAERunnerConfig(
     device="cuda",
     seed=42,
     n_checkpoints=3,
-    checkpoint_path="gpt2-small-transcoders",  # change as you please
+    checkpoint_path="codellama-transcoders",  # change as you please
     dtype=torch.float32,
     model_dtype=torch.float16,
 )
+
 
 print(f"About to start training with lr {lr} and l1 {l1_coeff}")
 print(f"Checkpoint path: {cfg.checkpoint_path}")
