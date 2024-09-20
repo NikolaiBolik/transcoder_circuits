@@ -9,7 +9,7 @@ dependencies:
   - numpy==1.26.4
   - plotly
   - pytorch==2.2.0
-  - pytorch-cuda=11.8
+  - pytorch-cuda==11.8
   - tqdm
   - datasets==2.14.0
   - fsspec==2023.9.2
