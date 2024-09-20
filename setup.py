@@ -9,12 +9,11 @@ setup(
     author='Jacob Dunefsky, and AIP members',
     author_email='artur.andrzejak@uni-heidelberg.de',
     description='Adaptation of transcoder_circuits to CodeLlama',
+    # The following requirements are incomplete, to simplify using it in e.g. my-rome
     install_requires = [
         "matplotlib",
         "numpy",
         "plotly",
-        "pytorch",
-        "pytorch-cuda",
         "tqdm",
         "datasets",
         "fsspec",
