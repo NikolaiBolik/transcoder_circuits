@@ -89,8 +89,8 @@ print("mlp.gate_proj.weight.shape:", model_ori.model.layers[19].mlp.gate_proj.we
 
 print("====================>>check: cache activation from upd weight<<======================")
 up_proj_activation_upd = load_model_and_extract_activation(upd_model, input_text)
-print("up_proj_activation_ori:", up_proj_activation_upd)
-print("up_proj_activation_ori.shape:", up_proj_activation_upd.shape)
+print("up_proj_activation_upd:", up_proj_activation_upd)
+print("up_proj_activation_upd.shape:", up_proj_activation_upd.shape)
 
 
 print("====================>>check: cache activation from ori weight<<======================")
