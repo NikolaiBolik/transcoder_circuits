@@ -16,7 +16,7 @@ class MyCustomModelForCausalLM(AutoModelForCausalLM):
             mlp.up_proj = torch.nn.Linear(in_features=4096, out_features=65536, bias=False)
             mlp.down_proj = torch.nn.Linear(in_features=65536, out_features=4096, bias=False)
             mlp.gate_proj = torch.nn.Linear(in_features=4096, out_features=65536, bias=False)
-            mlp.gate_proj.weight.data.fill_(0) 
+            mlp.gate_proj.weight.data.fill_(1) 
             
             sae_weights = torch.load(sae_weights_path)
 
