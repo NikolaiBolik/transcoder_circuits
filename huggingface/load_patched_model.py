@@ -117,11 +117,11 @@ if __name__ == '__main__':
     input_text = "hello world"
     layer_index = 19  # The index of the layer to patch
 
-    orig_model = AutoModelForCausalLM.from_pretrained(model_name)
     model = AutoModelForCausalLM.from_pretrained(model_name, ignore_mismatched_sizes=True)
     sae_weights = torch.load(sae_weights_path)
     patched_model = patch_mlp_with_tc(model, sae_weights, layer_index)
 
     # Compare the weights and activations
+    orig_model = AutoModelForCausalLM.from_pretrained(model_name)
     compare_weights(patched_model, orig_model, sae_weights, layer_index)
     compare_activations(patched_model, orig_model, input_text, layer_index)
