@@ -26,8 +26,8 @@ class MyCustomModelForCausalLM(AutoModelForCausalLM):
             sae_weights = torch.load(sae_weights_path)
 
             # todo: remove the hardcoded nums in the comments
-            W_enc = sae_weights['state_dict']['W_enc']  # shape: [4096, 65536]
-            W_dec = sae_weights['state_dict']['W_dec']  # shape: [65536, 4096]
+            W_enc = sae_weights['state_dict']['W_enc']  
+            W_dec = sae_weights['state_dict']['W_dec']  
 
             mlp.up_proj.weight.data.copy_(W_enc.T)  
             mlp.down_proj.weight.data.copy_(W_dec.T)  
