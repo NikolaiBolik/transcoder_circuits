@@ -11,19 +11,19 @@ setup(
     description='Adaptation of transcoder_circuits to CodeLlama',
     # The following requirements are incomplete, to simplify using it in e.g. my-rome
     install_requires = [
-        "matplotlib",
-        "numpy",
-        "plotly",
-        "tqdm",
-        "datasets",
-        "fsspec",
-        "einops",
-        "setuptools",
-        "wandb",
-        "huggingface_hub",
-        "jupyter",
-        "notebook",
-        "pip"
+        # "matplotlib",
+        # "numpy",
+        # "plotly",
+        # "tqdm",
+        # "datasets",
+        # "fsspec",
+        # "einops",
+        # "setuptools",
+        # "wandb",
+        # "huggingface_hub",
+        # "jupyter",
+        # "notebook",
+        # "pip"
     ]
 
 )
