@@ -24,8 +24,7 @@ class MyCustomModelForCausalLM(AutoModelForCausalLM):
             mlp.gate_proj.weight.data.fill_(1) 
             
             sae_weights = torch.load(sae_weights_path)
-
-            # todo: remove the hardcoded nums in the comments
+ 
             W_enc = sae_weights['state_dict']['W_enc']  
             W_dec = sae_weights['state_dict']['W_dec']  
 
