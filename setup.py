@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='transcoder_circuits',
-    version='0.2.1',
+    version='0.2.2',
     packages=['huggingface', 'sae_training', 'sae_training.geom_median', 'transcoder_circuits'],
     url='https://github.com/aip-hd-research/transcoder_circuits',
     license='MIT',
