@@ -2,10 +2,13 @@ from pathlib import Path
 
 import einops
 import torch
+from dill.logger import adapter
 from torch import nn
+from tqdm import tqdm
 from transformers import AutoModelForCausalLM, pipeline
 
 from sae_training.config import LanguageModelSAERunnerConfig
+from sae_training.sparse_autoencoder import SparseAutoencoder
 
 
 def anthropic_style_weight_init(layer: nn.Linear):
@@ -79,3 +82,18 @@ class TranscoderAdapter(nn.Module):
 
         module.load_state_dict(state_dict)
         return module
+
+
+def test_correctness(path_to_weights, N=1_000, device="cpu"):
+    original = SparseAutoencoder.load_from_pretrained(path_to_weights).to(device).eval()
+    adapter = TranscoderAdapter.load(path_to_weights).to(device).eval()
+
+    correct = 0
+    for _ in tqdm(range(N)):
+        x = torch.randn(original.d_in, device=device, dtype=original.dtype).unsqueeze(0)
+        correct += (original(x)[0] - adapter(x)).abs().max() < 1e-5
+
+    return f"{100 * (correct / N):.2f}"
+
+if __name__ == "__main__":
+    print(test_correctness('/nfs/data/shared/codellama-transcoders/12ok1dny/final_sparse_autoencoder_CodeLlama-7b-Instruct-hf_blocks.19.ln2.hook_normalized_16384.pt'))
