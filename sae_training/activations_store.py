@@ -52,13 +52,15 @@ class ActivationsStore:
             # TODO add support for "mixed loading" (ie use cache until you run out, then switch over to streaming from HF)
         
         if create_dataloader:
-            # fill buffer half a buffer, so we can mix it with a new buffer
-            self.storage_buffer_out = None
-            if self.cfg.is_transcoder:
-                # if we're a transcoder, then we want to keep a buffer for our input activations and our output activations
-                self.storage_buffer, self.storage_buffer_out = self.get_buffer(self.cfg.n_batches_in_buffer // 2)
-            else:
-                self.storage_buffer = self.get_buffer(self.cfg.n_batches_in_buffer // 2)
+            if self.cfg.improve_mixing:
+                # fill buffer half a buffer, so we can mix it with a new buffer
+                self.storage_buffer_out = None
+                if self.cfg.is_transcoder:
+                    # if we're a transcoder, then we want to keep a buffer for our input activations and our output activations
+                    self.storage_buffer, self.storage_buffer_out = self.get_buffer(self.cfg.n_batches_in_buffer // 2)
+                else:
+                    self.storage_buffer = self.get_buffer(self.cfg.n_batches_in_buffer // 2)
+
             self.dataloader = self.get_data_loader()
 
     def get_batch_tokens(self):
@@ -68,7 +70,7 @@ class ActivationsStore:
 
         batch_size = self.cfg.store_batch_size
         context_size = self.cfg.context_size
-        device = self.cfg.device
+        device = self.cfg.model_device
 
         batch_tokens = torch.zeros(size=(0, context_size), device=device, dtype=torch.long, requires_grad=False)
 
@@ -169,7 +171,7 @@ class ActivationsStore:
                 )[1]
                 activations = (cache[act_name], cache[self.cfg.out_hook_point])
 
-        return activations
+        return tuple(activation.to(self.cfg.device) for activation in activations)
 
     def get_buffer(self, n_batches_in_buffer):
         gc.collect()
@@ -290,33 +292,37 @@ class ActivationsStore:
         
         if self.cfg.is_transcoder:
             # ugly code duplication if we're a transcoder
-            new_buffer, new_buffer_out = self.get_buffer(self.cfg.n_batches_in_buffer // 2)
-            mixing_buffer = torch.cat(
-                [new_buffer,
-                 self.storage_buffer]
-            )
-            mixing_buffer_out = torch.cat(
-                [new_buffer_out,
-                 self.storage_buffer_out]
-            )
+            if self.cfg.improve_mixing:
+                new_buffer, new_buffer_out = self.get_buffer(self.cfg.n_batches_in_buffer // 2)
+                mixing_buffer = torch.cat(
+                    [new_buffer,
+                     self.storage_buffer]
+                )
+                mixing_buffer_out = torch.cat(
+                    [new_buffer_out,
+                     self.storage_buffer_out]
+                )
 
-            assert(mixing_buffer.shape[0] == mixing_buffer_out.shape[0])
-            randperm = torch.randperm(mixing_buffer.shape[0])
-            mixing_buffer = mixing_buffer[randperm]
-            mixing_buffer_out = mixing_buffer_out[randperm]
+                assert(mixing_buffer.shape[0] == mixing_buffer_out.shape[0])
+                randperm = torch.randperm(mixing_buffer.shape[0])
+                mixing_buffer = mixing_buffer[randperm]
+                mixing_buffer_out = mixing_buffer_out[randperm]
 
-            self.storage_buffer = mixing_buffer[:mixing_buffer.shape[0]//2]
-            self.storage_buffer_out = mixing_buffer_out[:mixing_buffer_out.shape[0]//2]
+                self.storage_buffer = mixing_buffer[:mixing_buffer.shape[0]//2]
+                self.storage_buffer_out = mixing_buffer_out[:mixing_buffer_out.shape[0]//2]
+            else:
+                new_buffer, new_buffer_out = self.get_buffer(self.cfg.n_batches_in_buffer)
 
             # have to properly stack both of our new buffers into the dataloader
-            """stacked_buffers = torch.stack([
-                mixing_buffer[mixing_buffer.shape[0]//2:],
-                mixing_buffer_out[mixing_buffer.shape[0]//2:]
-            ], dim=1)"""
             catted_buffers = torch.cat([
-                mixing_buffer[mixing_buffer.shape[0]//2:],
-                mixing_buffer_out[mixing_buffer.shape[0]//2:]
+                new_buffer,
+                new_buffer_out
             ], dim=1)
+
+            if not self.cfg.improve_mixing:
+                # Slices into buffer are views, i.e. no data is copied
+                self.storage_buffer = catted_buffers[:, :self.cfg.d_in]
+                self.storage_buffer_out = catted_buffers[:, self.cfg.d_in:]
 
             #dataloader = iter(DataLoader(stacked_buffers, batch_size=batch_size, shuffle=True))
             dataloader = iter(DataLoader(catted_buffers, batch_size=batch_size, shuffle=True))

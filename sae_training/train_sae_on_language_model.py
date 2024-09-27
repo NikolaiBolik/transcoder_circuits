@@ -303,6 +303,22 @@ def train_sae_on_language_model(
     return sparse_autoencoder
 
 
+def make_standard_replacement_hook(sparse_autoencoder, model):
+    def standard_replacement_hook(activations, hook):
+        activations = activations.to(device=sparse_autoencoder.device)
+        activations = sparse_autoencoder.forward(activations)[0].to(activations.dtype)
+        return activations.to(device=model.cfg.device)
+    return standard_replacement_hook
+
+def make_head_replacement_hook(sparse_autoencoder, model, head_index):
+    def head_replacement_hook(activations, hook):
+        activations = activations.to(device=sparse_autoencoder.device)
+        new_actions = sparse_autoencoder.forward(activations[:,:,head_index])[0].to(activations.dtype)
+        activations[:,:,head_index] = new_actions
+        return activations.to(device=model.cfg.device)
+    return head_replacement_hook
+
+
 @torch.no_grad()
 def run_evals(sparse_autoencoder: SparseAutoencoder, activation_store: ActivationsStore, model: HookedTransformer, n_training_steps: int):
     
@@ -321,12 +337,12 @@ def run_evals(sparse_autoencoder: SparseAutoencoder, activation_store: Activatio
     
     # get act
     if sparse_autoencoder.cfg.hook_point_head_index is not None:
-        original_act = cache[sparse_autoencoder.cfg.hook_point][:,:,sparse_autoencoder.cfg.hook_point_head_index]
+        original_act = cache[sparse_autoencoder.cfg.hook_point][:,:,sparse_autoencoder.cfg.hook_point_head_index].to(device=sparse_autoencoder.device)
     else:
-        original_act = cache[sparse_autoencoder.cfg.hook_point]
+        original_act = cache[sparse_autoencoder.cfg.hook_point].to(device=sparse_autoencoder.device)
         
     sae_out, feature_acts, _, _, _, _ = sparse_autoencoder(
-        original_act
+        original_act,
     )
     patterns_original = cache[get_act_name("pattern", hook_point_layer)][:,hook_point_head_index].detach().cpu()
     del cache
@@ -354,20 +370,10 @@ def run_evals(sparse_autoencoder: SparseAutoencoder, activation_store: Activatio
         },
         step=n_training_steps,
     )
-    
-    head_index = sparse_autoencoder.cfg.hook_point_head_index
-
-    def standard_replacement_hook(activations, hook):
-        activations = sparse_autoencoder.forward(activations)[0].to(activations.dtype)
-        return activations
-
-    def head_replacement_hook(activations, hook):
-        new_actions = sparse_autoencoder.forward(activations[:,:,head_index])[0].to(activations.dtype)
-        activations[:,:,head_index] = new_actions
-        return activations
 
     head_index = sparse_autoencoder.cfg.hook_point_head_index
-    replacement_hook = standard_replacement_hook if head_index is None else head_replacement_hook
+    replacement_hook = make_standard_replacement_hook(sparse_autoencoder, model) if head_index is None \
+        else make_head_replacement_hook(sparse_autoencoder, model, head_index)
     
     # get attn when using reconstructed activations
     with model.hooks(fwd_hooks=[(hook_point, partial(replacement_hook))]):
@@ -426,17 +432,9 @@ def get_recons_loss(sparse_autoencoder, model, activation_store, batch_tokens):
     loss = model(batch_tokens, return_type="loss")
 
     head_index = sparse_autoencoder.cfg.hook_point_head_index
+    replacement_hook = make_standard_replacement_hook(sparse_autoencoder, model) if head_index is None \
+        else make_head_replacement_hook(sparse_autoencoder, model, head_index)
 
-    def standard_replacement_hook(activations, hook):
-        activations = sparse_autoencoder.forward(activations)[0].to(activations.dtype)
-        return activations
-
-    def head_replacement_hook(activations, hook):
-        new_actions = sparse_autoencoder.forward(activations[:,:,head_index])[0].to(activations.dtype)
-        activations[:,:,head_index] = new_actions
-        return activations
-
-    replacement_hook = standard_replacement_hook if head_index is None else head_replacement_hook
     recons_loss = model.run_with_hooks(
         batch_tokens,
         return_type="loss",

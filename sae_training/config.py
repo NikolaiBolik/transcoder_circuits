@@ -34,12 +34,16 @@ class RunnerConfig(ABC):
     total_training_tokens: int = 2_000_000
     store_batch_size: int = 1024
     data_column: str = "tokens"
+    improve_mixing: bool = True
 
     # Misc
     device: str = "cpu"
+    model_device: str = "cpu"
+    model_n_devices: int = 1
     seed: int = 42
     dtype: torch.dtype = torch.float32
     model_dtype: torch.dtype = torch.float32
+    lazy_device_loading : bool = False
 
     # transcoder stuff
     is_transcoder: bool = False

@@ -1,10 +1,13 @@
+import types
 from typing import Tuple
 
 import torch
+from accelerate.optimizer import move_to_device
 from transformer_lens import HookedTransformer
 
 from sae_training.activations_store import ActivationsStore
 from sae_training.config import LanguageModelSAERunnerConfig
+from sae_training.device_management import unload_competing_modules_on_use
 from sae_training.sparse_autoencoder import SparseAutoencoder
 
 
@@ -25,10 +28,20 @@ class LMSparseAutoencoderSessionloader():
         Loads a session for training a sparse autoencoder on a language model.
         '''
         
-        model = self.get_model(self.cfg.model_name, self.cfg.model_dtype)
-        model.to(self.cfg.device)
-        activations_loader = self.get_activations_loader(self.cfg, model)
-        sparse_autoencoder = self.initialize_sparse_autoencoder(self.cfg)
+        model = self.get_model()
+        sparse_autoencoder = self.initialize_sparse_autoencoder()
+
+        if self.cfg.lazy_device_loading:
+            model.run_with_cache = types.MethodType(unload_competing_modules_on_use(
+                model.run_with_cache,
+[sparse_autoencoder]
+            ), model)
+            sparse_autoencoder.__call__ = types.MethodType(unload_competing_modules_on_use(
+                sparse_autoencoder.__call__,
+                [model]
+            ), sparse_autoencoder)
+
+        activations_loader = self.get_activations_loader(model)
             
         return model, sparse_autoencoder, activations_loader
     
@@ -50,33 +63,39 @@ class LMSparseAutoencoderSessionloader():
         
         return model, sparse_autoencoder, activations_loader
     
-    def get_model(self, model_name: str, dtype: torch.dtype):
+    def get_model(self):
         '''
         Loads a model from transformer lens
         '''
         
         # Todo: add check that model_name is valid
-        
-        model = HookedTransformer.from_pretrained(model_name, torch_dtype=dtype)
+
+        model = HookedTransformer.from_pretrained(
+            self.cfg.model_name,
+            torch_dtype=self.cfg.model_dtype,
+            device=self.cfg.model_device,
+            n_devices=self.cfg.model_n_devices,
+            move_to_device=not self.cfg.lazy_device_loading,
+        )
         
         return model 
     
-    def initialize_sparse_autoencoder(self, cfg: LanguageModelSAERunnerConfig):
+    def initialize_sparse_autoencoder(self):
         '''
         Initializes a sparse autoencoder
         '''
         
-        sparse_autoencoder = SparseAutoencoder(cfg)
+        sparse_autoencoder = SparseAutoencoder(self.cfg)
         
         return sparse_autoencoder
     
-    def get_activations_loader(self, cfg: LanguageModelSAERunnerConfig, model: HookedTransformer):
+    def get_activations_loader(self, model: HookedTransformer):
         '''
         Loads a DataLoaderBuffer for the activations of a language model.
         '''
         
         activations_loader = ActivationsStore(
-            cfg, model,
+            self.cfg, model,
         )
         
         return activations_loader
