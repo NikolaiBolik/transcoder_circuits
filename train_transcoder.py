@@ -100,7 +100,7 @@ def main(args):
         log_to_wandb=True,
         wandb_project="Transcoder_Codellama",
         wandb_entity="pvs-shared",
-        wandb_group="CodeLlama_expansion_factor_16",
+        wandb_group=None,
         wandb_log_frequency=10,
 
         # Misc
