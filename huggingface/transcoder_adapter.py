@@ -83,6 +83,33 @@ class TranscoderAdapter(nn.Module):
         module.load_state_dict(state_dict)
         return module
 
+    def save(self, path: str):
+        """
+        Save the model configuration and state dictionary to the given path.
+
+        Args:
+            path: The file path where the model should be saved.
+        """
+        path = Path(path)
+        path.parent.mkdir(parents=True, exist_ok=True)  # Ensure the directory exists
+
+        # Prepare the state dictionary with renamed keys for compatibility
+        state_dict = self.state_dict()
+        state_dict['W_enc'] = state_dict['up_proj.weight'].T
+        state_dict['b_enc'] = state_dict['up_proj.bias']
+        state_dict['W_dec'] = state_dict['down_proj.weight'].T
+        state_dict['b_dec_out'] = state_dict['down_proj.bias']
+        del state_dict['up_proj.weight']
+        del state_dict['up_proj.bias']
+        del state_dict['down_proj.weight']
+        del state_dict['down_proj.bias']
+
+        # Save the configuration and the state dictionary
+        torch.save({
+            "cfg": self.cfg,
+            "state_dict": state_dict
+        }, path)
+
 
 def test_correctness(path_to_weights, N=1_000, device="cpu"):
     original = SparseAutoencoder.load_from_pretrained(path_to_weights).to(device).eval()
