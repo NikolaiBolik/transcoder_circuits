@@ -28,8 +28,8 @@ from sae_training.train_sae_on_language_model import train_sae_on_language_model
 
 def main(args):
     lr = 4e-4  # learning rate
-    l1_coeff = 1e-6  # l1 sparsity regularization coefficient 1.4e-4
-    expansion_factor = 16
+    l1_coeff = 9e-7  # l1 sparsity regularization coefficient 1.4e-4
+    expansion_factor = 8
 
     batch_size = 4096
     per_device_batch_size = None
@@ -83,7 +83,7 @@ def main(args):
         # Activation Store Parameters
         n_batches_in_buffer=32,  # Must be large enough so that n_batches_in_buffer * store_batch_size * context_size >= 2 * train_batch_size
         total_training_tokens=total_training_tokens,
-        store_batch_size=1,
+        store_batch_size=4,
         data_column="code",
         improve_mixing=True,  # Disabling this mean you can get as low as n_batches_in_buffer * store_batch_size * context_size >= train_batch_size
 
