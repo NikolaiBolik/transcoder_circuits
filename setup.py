@@ -1,9 +1,9 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 setup(
     name='transcoder_circuits',
     version='0.2.2',
-    packages=['huggingface', 'sae_training', 'sae_training.geom_median', 'transcoder_circuits'],
+    packages=find_packages(),
     url='https://github.com/aip-hd-research/transcoder_circuits',
     license='MIT',
     author='Jacob Dunefsky, and AIP members',
