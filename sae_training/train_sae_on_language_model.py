@@ -15,6 +15,7 @@ from sae_training.sparse_autoencoder import SparseAutoencoder
 
 
 def train_sae_on_language_model(
+    cfg,  
     model: HookedTransformer,
     sparse_autoencoder: SparseAutoencoder,
     activation_store: ActivationsStore,
