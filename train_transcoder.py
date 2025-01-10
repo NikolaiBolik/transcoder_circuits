@@ -19,7 +19,7 @@ import sys
 import numpy as np
 import wandb
 from wandb.cli.cli import offline
-
+wandb.init( project="Transcoder_Codellama_Test")
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 from sae_training.config import LanguageModelSAERunnerConfig
@@ -27,9 +27,9 @@ from sae_training.utils import LMSparseAutoencoderSessionloader
 from sae_training.train_sae_on_language_model import train_sae_on_language_model
 
 def main(args):
-    lr = 4e-4  # learning rate
-    l1_coeff = 9e-7  # l1 sparsity regularization coefficient 1.4e-4
-    expansion_factor = 8
+    lr = 1e-4  # learning rate
+    l1_coeff = 2e-7  # l1 sparsity regularization coefficient 1.4e-4
+    expansion_factor = 16
 
     batch_size = 4096
     per_device_batch_size = None
@@ -98,20 +98,20 @@ def main(args):
 
         # WANDB
         log_to_wandb=True,
-        wandb_project="Transcoder_Codellama",
+        wandb_project="Transcoder_Codellama_Test",
         wandb_entity="pvs-shared",
         wandb_group=None,
         wandb_log_frequency=10,
 
         # Misc
         use_tqdm=True,
-        device="cuda:0",
+        device="cuda",
         seed=42,
         n_checkpoints=0,
-        checkpoint_path="/nfs/data/shared/codellama-transcoders",  # change as you please
+        checkpoint_path="/pfs/data5/home/hd/hd_hd/hd_pe220/codellama-transcoder",  # change as you please
         dtype=torch.float32,
         model_dtype=torch.float16,
-        model_device="cuda:1",
+        model_device="cuda",
         lazy_device_loading=False,
     )
 
@@ -128,7 +128,7 @@ def main(args):
     model, sparse_autoencoder, activations_loader = loader.load_session()
 
     # train SAE
-    sparse_autoencoder = train_sae_on_language_model(
+    sparse_autoencoder = train_sae_on_language_model(cfg,
         model, sparse_autoencoder, activations_loader,
         n_checkpoints=cfg.n_checkpoints,
         batch_size=cfg.train_batch_size,
